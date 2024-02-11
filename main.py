@@ -4,6 +4,8 @@ matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 from enum import Enum
 
+from functools import partial
+
 
 class Types(Enum):
     MEAN = 1
@@ -14,6 +16,13 @@ class TemperatureDataAnalyzer:
     def __init__(self, file_path):
         self.file_path = file_path
         xls = pd.ExcelFile(self.file_path)
+        # rok: Year
+        # měsíc: Month
+        # den: Day
+        # T-AVG: Average temperature (°C)
+        # TMA: Maximum temperature (°C)
+        # TMI: Minimum temperature (°C)
+        # SRA: Total rainfall (mm)
         self.data = pd.read_excel(xls, 'data')
 
     def read_data(self):
@@ -31,7 +40,7 @@ class TemperatureDataAnalyzer:
         summary = self.data.describe()
         print(summary)
 
-    def get_data(self, time, base, variant):
+    def get_data(self, time, base, variant, filter_func=None):
         if self.data is None:
             print("No data to analyze. Please read the data first.")
             return
@@ -40,6 +49,8 @@ class TemperatureDataAnalyzer:
             data = self.data.dropna(subset=['SRA'])
         else:
             data = self.data
+        if filter_func is not None:
+            data = data[filter_func(data)]
         match variant:
             case Types.MEAN:
                 return data.groupby(time)[base].mean()
@@ -50,97 +61,6 @@ class TemperatureDataAnalyzer:
             case _:
                 return None
 
-    def monthly_avg_temperature(self):
-        if self.data is None:
-            print("No data to analyze. Please read the data first.")
-            return
-
-        monthly_avg_temp = self.data.groupby('měsíc')['T-AVG'].mean()
-        return monthly_avg_temp
-
-    def monthly_max_temperature(self):
-        if self.data is None:
-            print("No data to analyze. Please read the data first.")
-            return
-
-        monthly_max_temp = self.data.groupby('měsíc')['TMA'].max()
-        return monthly_max_temp
-
-    def monthly_min_temperature(self):
-        if self.data is None:
-            print("No data to analyze. Please read the data first.")
-            return
-
-        monthly_min_temp = self.data.groupby('měsíc')['TMI'].min()
-        return monthly_min_temp
-
-    def yearly_max_temperature(self):
-        if self.data is None:
-            print("No data to analyze. Please read the data first.")
-            return
-
-        yearly_max_temp = self.data.groupby('rok')['TMA'].max()
-        return yearly_max_temp
-    def yearly_min_temperature(self):
-        if self.data is None:
-            print("No data to analyze. Please read the data first.")
-            return
-
-        yearly_min_temp = self.data.groupby('rok')['TMI'].min()
-        return yearly_min_temp
-    def yearly_avg_temperature(self):
-        if self.data is None:
-            print("No data to analyze. Please read the data first.")
-            return
-
-        yearly_avg_temp = self.data.groupby('rok')['T-AVG'].mean()
-        return yearly_avg_temp
-
-    def monthly_avg_rainfall(self):
-        if self.data is None:
-            print("No data to analyze. Please read the data first.")
-            return
-
-        monthly_avg_rainfall = self.data.dropna(subset=['SRA']).groupby('měsíc')['SRA'].mean()
-        return monthly_avg_rainfall
-    def monthly_max_rainfall(self):
-        if self.data is None:
-            print("No data to analyze. Please read the data first.")
-            return
-
-        monthly_max_rainfall = self.data.dropna(subset=['SRA']).groupby('měsíc')['SRA'].max()
-        return monthly_max_rainfall
-    def monthly_min_rainfall(self):
-        if self.data is None:
-            print("No data to analyze. Please read the data first.")
-            return
-
-        monthly_min_rainfall = self.data.dropna(subset=['SRA']).groupby('měsíc')['SRA'].min()
-        return monthly_min_rainfall
-
-    def yearly_max_rainfall(self):
-        if self.data is None:
-            print("No data to analyze. Please read the data first.")
-            return
-
-        yearly_max_rainfall = self.data.dropna(subset=['SRA']).groupby('rok')['SRA'].max()
-        return yearly_max_rainfall
-    
-    def yearly_min_rainfall(self):
-        if self.data is None:
-            print("No data to analyze. Please read the data first.")
-            return
-
-        yearly_min_rainfall = self.data.dropna(subset=['SRA']).groupby('rok')['SRA'].min()
-        return yearly_min_rainfall
-
-    def yearly_avg_rainfall(self):
-        if self.data is None:
-            print("No data to analyze. Please read the data first.")
-            return
-
-        yearly_avg_rainfall = self.data.dropna(subset=['SRA']).groupby('rok')['SRA'].mean()
-        return yearly_avg_rainfall
 
     def plot(self, title, xlabel, ylabel, *data):
         if data is None:
@@ -160,7 +80,7 @@ class TemperatureDataAnalyzer:
             print("No data to analyze. Please read the data first.")
             return
 
-        monthly_avg_temp = self.monthly_avg_temperature()
+        monthly_avg_temp = self.get_data('měsíc', 'T-AVG', Types.MEAN)
         self.plot("Monthly Average Temperature", "Month", "Temperature (°C)", monthly_avg_temp)
 
     def plot_monthly_max_temperature(self):
@@ -168,7 +88,7 @@ class TemperatureDataAnalyzer:
             print("No data to analyze. Please read the data first.")
             return
 
-        monthly_max_temp = self.monthly_max_temperature()
+        monthly_max_temp = self.get_data('měsíc', 'TMA', Types.MAX)
         self.plot("Monthly Max Temperature", "Month", "Temperature (°C)", monthly_max_temp)
 
     def plot_monthly_min_temperature(self):
@@ -176,25 +96,46 @@ class TemperatureDataAnalyzer:
             print("No data to analyze. Please read the data first.")
             return
 
-        monthly_min_temp = self.monthly_min_temperature()
+        monthly_min_temp = self.get_data('měsíc', 'TMI', Types.MIN)
         self.plot("Monthly Min Temperature", "Month", "Temperature (°C)", monthly_min_temp)
 
     def plot_monthly_all_temperature(self):
         if self.data is None:
             print("No data to analyze. Please read the data first.")
             return
+        temperature = partial(self.get_data, 'měsíc')
 
-        monthly_avg_temp = self.monthly_avg_temperature()
-        monthly_max_temp = self.monthly_max_temperature()
-        monthly_min_temp = self.monthly_min_temperature()
+        monthly_avg_temp = temperature('T-AVG', Types.MEAN)
+        monthly_avg_temp.name = "Average Temperature"
+        monthly_max_temp = temperature('TMA', Types.MAX)
+        monthly_max_temp.name = "Max Temperature"
+        monthly_min_temp = temperature('TMI', Types.MIN)
+        monthly_min_temp.name = "Min Temperature"
         self.plot("Monthly Temperature", "Month", "Temperature (°C)", monthly_avg_temp, monthly_max_temp, monthly_min_temp)
 
-    def plot_monthly_rainfall(self):
+    def plot_yearly_all_temperature(self, start_year=0, end_year=10000):
+        if self.data is None:
+            print("No data to analyze. Please read the data first.")
+            return
+        # start year 1900
+        # end year 2020
+        temperature = partial(self.get_data, 'rok', filter_func=lambda x: (x['rok'] >= start_year) & (x['rok'] <= end_year))
+        # temperature = partial(self.get_data, 'rok')
+
+        monthly_avg_temp = temperature('T-AVG', Types.MEAN)
+        monthly_avg_temp.name = "Average Temperature"
+        monthly_max_temp = temperature('TMA', Types.MAX)
+        monthly_max_temp.name = "Max Temperature"
+        monthly_min_temp = temperature('TMI', Types.MIN)
+        monthly_min_temp.name = "Min Temperature"
+        self.plot("Yearly Temperature", "Year", "Temperature (°C)", monthly_avg_temp, monthly_max_temp, monthly_min_temp)
+
+    def plot_monthly_avg_rainfall(self):
         if self.data is None:
             print("No data to analyze. Please read the data first.")
             return
 
-        monthly_avg_rainfall = self.monthly_avg_rainfall()
+        monthly_avg_rainfall = self.get_data('měsíc', 'SRA', Types.MEAN)
         self.plot("Monthly Average Rainfall", "Month", "Rainfall (mm)", monthly_avg_rainfall)
 
     def plot_monthly_max_rainfall(self):
@@ -202,26 +143,28 @@ class TemperatureDataAnalyzer:
             print("No data to analyze. Please read the data first.")
             return
 
-        monthly_max_rainfall = self.monthly_max_rainfall()
+        monthly_max_rainfall = self.get_data('měsíc', 'SRA', Types.MAX)
         self.plot("Monthly Max Rainfall", "Month", "Rainfall (mm)", monthly_max_rainfall)
+
     def plot_monthly_min_rainfall(self):
         if self.data is None:
             print("No data to analyze. Please read the data first.")
             return
 
-        monthly_min_rainfall = self.monthly_min_rainfall()
+        monthly_min_rainfall = self.get_data('měsíc', 'SRA', Types.MIN)
         self.plot("Monthly Min Rainfall", "Month", "Rainfall (mm)", monthly_min_rainfall)
 
     def plot_monthly_all_rainfall(self):
         if self.data is None:
             print("No data to analyze. Please read the data first.")
             return
+        rainfall = partial(self.get_data, 'měsíc', 'SRA')
 
-        monthly_avg_rainfall = self.monthly_avg_rainfall()
+        monthly_avg_rainfall = rainfall(Types.MEAN)
         monthly_avg_rainfall.name = "Average Rainfall"
-        monthly_max_rainfall = self.monthly_max_rainfall()
+        monthly_max_rainfall = rainfall(Types.MAX)
         monthly_max_rainfall.name = "Max Rainfall"
-        monthly_min_rainfall = self.monthly_min_rainfall()
+        monthly_min_rainfall = rainfall(Types.MIN)
         monthly_min_rainfall.name = "Min Rainfall"
         self.plot("Monthly Rainfall", "Month", "Rainfall (mm)", monthly_avg_rainfall, monthly_max_rainfall, monthly_min_rainfall)
 
@@ -230,12 +173,10 @@ if __name__ == "__main__":
     analyzer = TemperatureDataAnalyzer(file_path)
     analyzer.read_data()
     analyzer.summary_statistics()
-    print(analyzer.monthly_avg_temperature())
-    print(analyzer.yearly_max_rainfall())
-    print(analyzer.yearly_avg_rainfall())
-    print(analyzer.yearly_min_rainfall())
-    print(analyzer.monthly_max_rainfall())
-    print(analyzer.monthly_avg_rainfall())
-    print(analyzer.monthly_min_rainfall())
+    print(analyzer.get_data('rok', 'T-AVG', Types.MEAN))
+    print(analyzer.get_data('rok', 'TMA', Types.MAX))
+    print(analyzer.get_data('rok', 'TMI', Types.MIN))
+    print(analyzer.get_data('rok', 'SRA', Types.MEAN))
     analyzer.plot_monthly_avg_temperature()
     analyzer.plot_monthly_all_rainfall()
+    analyzer.plot_yearly_all_temperature() 
