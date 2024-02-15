@@ -25,12 +25,18 @@ class TemperatureDataAnalyzer:
         summary = self.data.describe()
         print(summary)
 
-    def get_data(self, time, base, filter_func=None) -> pd.DataFrame|None:
+    def get_pure_data(self):
         if self.data is None:
+            print("No data to analyze. Please read the data first.")
+            return
+
+        return self.data
+    def get_data(self, time, base, filter_func=None) -> pd.DataFrame|None:
+        data = self.get_pure_data()
+        if data is None:
             print("No data to analyze. Please read the data first.")
             return None
 
-        data = self.data
         if base == 'SRA':
             data = data.dropna(subset=['SRA'])
         if filter_func is not None:
@@ -203,25 +209,55 @@ class TemperatureDataAnalyzer:
         daily_min_rainfall = daily_min_rainfall_data.min()
         self.plot("Daily Min Rainfall", "Day", "Rainfall (mm)", daily_min_rainfall)
 
-    def diff_rain(self):
-        if self.data is None:
+    def plot_rainfall_mean_development_decades(self):
+        rainfall = self.get_data('rok', 'SRA')
+        if rainfall is None:
             print("No data to analyze. Please read the data first.")
             return
-        data = self.get_dat
-        print(data)
 
-    def plot_diff_rain(self):
-        if self.data is None:
+        rainfall_mean = rainfall.mean()
+        rainfall_mean_decades = rainfall_mean.groupby(rainfall_mean.index // 10 * 10).mean()
+        self.plot("Rainfall Mean Development Decades", "Decade", "Rainfall (mm)", rainfall_mean_decades)
+
+    def plot_rainfall_mean_development_years(self, number_of_years=1, start_year=0, end_year=10000):
+        rainfall = self.get_data('rok', 'SRA', filter_func=lambda x: (x['rok'] >= start_year) & (x['rok'] <= end_year))
+        if rainfall is None:
             print("No data to analyze. Please read the data first.")
             return
-        # data = self.get_data('rok', 'SRA', filter_func=lambda x: (x['rok'] == 2019) | (x['rok'] == 2020)).diff()
-        def filter_func(x):
-            return (x['rok'] == 2019) | (x['rok'] == 2020)
-        data = self.data.dropna(subset=['SRA'])
-        data = data[filter_func(data)]
-        data = data['SRA'].diff()
-        data.name = "INFO"
-        self.plot("Daily Rainfall Difference", "Day", "Rainfall (mm)", data)
+
+        rainfall_mean = rainfall.mean()
+        rainfall_mean_years = rainfall_mean.groupby(rainfall_mean.index // number_of_years * number_of_years).mean()
+        self.plot(f"Rainfall Mean Development Years (By {number_of_years} years)", "Year", "Rainfall (mm)", rainfall_mean_years)
+
+    def plot_rainfall_mean_development_month(self, month):
+        rainfall = self.get_data('rok', 'SRA', filter_func=lambda x: x['měsíc'] == month)
+        if rainfall is None:
+            print("No data to analyze. Please read the data first.")
+            return
+
+        rainfall_mean = rainfall.mean()
+        rainfall_mean_month = rainfall_mean.groupby(rainfall_mean.index // 10 * 10).mean()
+        self.plot(f"Rainfall Mean Development For A month", "Year", "ainfall (mm)", rainfall_mean_month)
+
+
+    def get_highest_rainfall_date(self):
+        rainfall = self.get_pure_data()
+        if rainfall is None:
+            print("No data to analyze. Please read the data first.")
+            return
+        index = rainfall['SRA'].idxmax()
+        return (rainfall['rok'][index], rainfall['měsíc'][index], rainfall['den'][index], rainfall['SRA'][index])
+
+
+
+    def get_lowest_rainfall_date(self):
+        rainfall = self.get_pure_data()
+        if rainfall is None:
+            print("No data to analyze. Please read the data first.")
+            return
+        index = rainfall['SRA'].idxmin()
+        return (rainfall['rok'][index], rainfall['měsíc'][index], rainfall['den'][index], rainfall['SRA'][index])
+
 
 
 if __name__ == "__main__":
@@ -236,4 +272,10 @@ if __name__ == "__main__":
     # analyzer.plot_monthly_avg_temperature()
     # analyzer.plot_monthly_all_rainfall()
     # analyzer.plot_yearly_all_temperature(1900, 2020)
-    analyzer.plot_diff_rain()
+    # analyzer.plot_rainfall_mean_development_decades()
+    # analyzer.plot_rainfall_mean_development_years(10)
+    # analyzer.plot_rainfall_mean_development_years(1, 1900, 2020)
+    analyzer.plot_rainfall_mean_development_month(1)
+    print(analyzer.get_highest_rainfall_date())
+    print(analyzer.get_highest_rainfall_month())
+
