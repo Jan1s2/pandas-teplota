@@ -1,4 +1,6 @@
 import pandas as pd
+import numpy as np
+from scipy import stats
 import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
@@ -31,6 +33,7 @@ class TemperatureDataAnalyzer:
             return
 
         return self.data
+
     def get_data(self, time, base, filter_func=None) -> pd.DataFrame|None:
         data = self.get_pure_data()
         if data is None:
@@ -56,7 +59,7 @@ class TemperatureDataAnalyzer:
         plt.ylabel(ylabel)
         plt.legend()
         plt.show()
-    
+
     def plot_monthly_avg_temperature(self):
         monthly_avg_temp_data = self.get_data('měsíc', 'T-AVG')
         if monthly_avg_temp_data is None:
@@ -100,7 +103,7 @@ class TemperatureDataAnalyzer:
         self.plot("Monthly Temperature", "Month", "Temperature (°C)", monthly_avg_temp, monthly_max_temp, monthly_min_temp)
 
     def plot_yearly_all_temperature(self, start_year=0, end_year=10000):
-        temperature = partial(self.get_data, time='rok', filter_func=lambda x: (x['rok'] >= start_year) & (x['rok'] <= end_year))
+        temperature = partial(self.get_data, time='rok', filter_func=lambda x: (x['rok'] >= start_year) & (x['rok'] < end_year))
         monthly_avg_temp_data = temperature(base='T-AVG')
         if monthly_avg_temp_data is None:
             print("No data to analyze. Please read the data first.")
@@ -155,7 +158,7 @@ class TemperatureDataAnalyzer:
         monthly_min_rainfall.name = "Min Rainfall"
         self.plot("Monthly Rainfall", "Month", "Rainfall (mm)", monthly_avg_rainfall, monthly_max_rainfall, monthly_min_rainfall)
 
-    def plot_day_of_month_avg_temperature(self):
+    def plot_day_avg_temperature(self):
         daily_avg_temp_data = self.get_data('den', 'T-AVG')
         if daily_avg_temp_data is None:
             print("No data to analyze. Please read the data first.")
@@ -237,8 +240,7 @@ class TemperatureDataAnalyzer:
 
         rainfall_mean = rainfall.mean()
         rainfall_mean_month = rainfall_mean.groupby(rainfall_mean.index // 10 * 10).mean()
-        self.plot(f"Rainfall Mean Development For A month", "Year", "ainfall (mm)", rainfall_mean_month)
-
+        self.plot(f"Rainfall Mean Development For A month", "Year", "Rainfall (mm)", rainfall_mean_month)
 
     def get_highest_rainfall_date(self):
         rainfall = self.get_pure_data()
@@ -248,8 +250,6 @@ class TemperatureDataAnalyzer:
         index = rainfall['SRA'].idxmax()
         return (rainfall['rok'][index], rainfall['měsíc'][index], rainfall['den'][index], rainfall['SRA'][index])
 
-
-
     def get_lowest_rainfall_date(self):
         rainfall = self.get_pure_data()
         if rainfall is None:
@@ -258,6 +258,48 @@ class TemperatureDataAnalyzer:
         index = rainfall['SRA'].idxmin()
         return (rainfall['rok'][index], rainfall['měsíc'][index], rainfall['den'][index], rainfall['SRA'][index])
 
+    def get_highest_temperature_date(self, start_year=0, end_year=10000):
+        temperature = self.get_pure_data()
+        if temperature is None:
+            print("No data to analyze. Please read the data first.")
+            return
+        temperature = temperature[(temperature['rok'] >= start_year) & (temperature['rok'] <= end_year)]
+        index = temperature['T-AVG'].idxmax()
+        return (temperature['rok'][index], temperature['měsíc'][index], temperature['den'][index], temperature['T-AVG'][index])
+
+    def get_lowest_temperature_date(self, start_year=0, end_year=10000):
+        temperature = self.get_pure_data()
+        if temperature is None:
+            print("No data to analyze. Please read the data first.")
+            return
+        temperature = temperature[(temperature['rok'] >= start_year) & (temperature['rok'] <= end_year)]
+        index = temperature['T-AVG'].idxmin()
+        return (temperature['rok'][index], temperature['měsíc'][index], temperature['den'][index], temperature['T-AVG'][index])
+    
+    def __get_outliers(self, column, offset=3, filter_func=None):
+        data = self.get_pure_data().dropna(subset=[column])
+        if data is None:
+            print("No data to analyze. Please read the data first.")
+            return
+        if filter_func is not None:
+            data = data[filter_func(data)]
+        z = np.abs(stats.zscore(data[column]))
+        return data[(z > offset) | (z < -offset)]
+    def get_temperature_outliers(self, offset=3, filter_func=None):
+        return self.__get_outliers('T-AVG', offset, filter_func)
+    def get_rainfall_outliers(self, offset=3, filter_func=None):
+        return self.__get_outliers('SRA', offset, filter_func)
+    def get_max_temperature_outliers(self, offset=3, filter_func=None):
+        return self.__get_outliers('TMA', offset, filter_func)
+    def get_min_temperature_outliers(self, offset=3, filter_func=None):
+        return self.__get_outliers('TMI', offset, filter_func)
+
+    def filter_month(self, month):
+        return lambda x: x['měsíc'] == month
+    def filter_year(self, year):
+        return lambda x: x['rok'] == year
+    def filter_month_year(self, month, year):
+        return lambda x: (x['měsíc'] == month) & (x['rok'] == year)
 
 
 if __name__ == "__main__":
@@ -275,7 +317,14 @@ if __name__ == "__main__":
     # analyzer.plot_rainfall_mean_development_decades()
     # analyzer.plot_rainfall_mean_development_years(10)
     # analyzer.plot_rainfall_mean_development_years(1, 1900, 2020)
-    analyzer.plot_rainfall_mean_development_month(1)
-    print(analyzer.get_highest_rainfall_date())
-    print(analyzer.get_highest_rainfall_month())
+    # analyzer.plot_rainfall_mean_development_month(1)
+    # analyzer.plot_day_of_month_max_rainfall()
+    # print(analyzer.get_highest_rainfall_date())
+    # print(analyzer.get_lowest_rainfall_date())
+    # print(analyzer.get_highest_temperature_date(1999, 1999))
+    analyzer.plot_day_of_month_avg_rainfall()
+    print(analyzer.get_rainfall_outliers())
+    print(analyzer.get_max_temperature_outliers())
+    print(analyzer.get_min_temperature_outliers())
+    print(analyzer.get_temperature_outliers(filter_func=analyzer.filter_month(1)))
 
