@@ -4,8 +4,22 @@ from scipy import stats
 import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
+from enum import Enum
 
 from functools import partial
+
+class Seasons(Enum):
+    WINTER = 1
+    SPRING = 2
+    SUMMER = 3
+    AUTUMN = 4
+
+class Holidays(Enum):
+    NEW_YEAR = 1
+    EASTER = 2
+    CHRISTMAS = 3
+    HALLOWEEN = 4
+
 
 class TemperatureDataAnalyzer:
     def __init__(self, file_path):
@@ -34,7 +48,7 @@ class TemperatureDataAnalyzer:
 
         return self.data
 
-    def get_data(self, time, base, filter_func=None) -> pd.DataFrame|None:
+    def get_data(self, time, base=None, filter_func=None) -> pd.DataFrame|None:
         data = self.get_pure_data()
         if data is None:
             print("No data to analyze. Please read the data first.")
@@ -44,7 +58,8 @@ class TemperatureDataAnalyzer:
             data = data.dropna(subset=['SRA'])
         if filter_func is not None:
             data = data[filter_func(data)]
-
+        if base is None:
+            return data.groupby(time)
         return data.groupby(time)[base]
 
     def plot(self, title, xlabel, ylabel, *data):
@@ -102,8 +117,8 @@ class TemperatureDataAnalyzer:
         monthly_min_temp.name = "Min Temperature"
         self.plot("Monthly Temperature", "Month", "Temperature (°C)", monthly_avg_temp, monthly_max_temp, monthly_min_temp)
 
-    def plot_yearly_all_temperature(self, start_year=0, end_year=10000):
-        temperature = partial(self.get_data, time='rok', filter_func=lambda x: (x['rok'] >= start_year) & (x['rok'] < end_year))
+    def plot_yearly_all_temperature(self, filter_func=None):
+        temperature = partial(self.get_data, time='rok', filter_func=filter_func)
         monthly_avg_temp_data = temperature(base='T-AVG')
         if monthly_avg_temp_data is None:
             print("No data to analyze. Please read the data first.")
@@ -222,8 +237,8 @@ class TemperatureDataAnalyzer:
         rainfall_mean_decades = rainfall_mean.groupby(rainfall_mean.index // 10 * 10).mean()
         self.plot("Rainfall Mean Development Decades", "Decade", "Rainfall (mm)", rainfall_mean_decades)
 
-    def plot_rainfall_mean_development_years(self, number_of_years=1, start_year=0, end_year=10000):
-        rainfall = self.get_data('rok', 'SRA', filter_func=lambda x: (x['rok'] >= start_year) & (x['rok'] <= end_year))
+    def plot_rainfall_mean_development_years(self, number_of_years=1, filter_func=None):
+        rainfall = self.get_data('rok', 'SRA', filter_func=filter_func)
         if rainfall is None:
             print("No data to analyze. Please read the data first.")
             return
@@ -258,21 +273,21 @@ class TemperatureDataAnalyzer:
         index = rainfall['SRA'].idxmin()
         return (rainfall['rok'][index], rainfall['měsíc'][index], rainfall['den'][index], rainfall['SRA'][index])
 
-    def get_highest_temperature_date(self, start_year=0, end_year=10000):
+    def get_highest_temperature_date(self, filter_func=None):
         temperature = self.get_pure_data()
         if temperature is None:
             print("No data to analyze. Please read the data first.")
             return
-        temperature = temperature[(temperature['rok'] >= start_year) & (temperature['rok'] <= end_year)]
+        temperature = temperature[filter_func(temperature)]
         index = temperature['T-AVG'].idxmax()
         return (temperature['rok'][index], temperature['měsíc'][index], temperature['den'][index], temperature['T-AVG'][index])
 
-    def get_lowest_temperature_date(self, start_year=0, end_year=10000):
+    def get_lowest_temperature_date(self, filter_func=None):
         temperature = self.get_pure_data()
         if temperature is None:
             print("No data to analyze. Please read the data first.")
             return
-        temperature = temperature[(temperature['rok'] >= start_year) & (temperature['rok'] <= end_year)]
+        temperature = temperature[filter_func(temperature)]
         index = temperature['T-AVG'].idxmin()
         return (temperature['rok'][index], temperature['měsíc'][index], temperature['den'][index], temperature['T-AVG'][index])
     
@@ -284,7 +299,7 @@ class TemperatureDataAnalyzer:
         if filter_func is not None:
             data = data[filter_func(data)]
         z = np.abs(stats.zscore(data[column]))
-        return data[(z > offset) | (z < -offset)]
+        return data[(z > offset)]
     def get_temperature_outliers(self, offset=3, filter_func=None):
         return self.__get_outliers('T-AVG', offset, filter_func)
     def get_rainfall_outliers(self, offset=3, filter_func=None):
@@ -294,12 +309,63 @@ class TemperatureDataAnalyzer:
     def get_min_temperature_outliers(self, offset=3, filter_func=None):
         return self.__get_outliers('TMI', offset, filter_func)
 
-    def filter_month(self, month):
-        return lambda x: x['měsíc'] == month
-    def filter_year(self, year):
-        return lambda x: x['rok'] == year
-    def filter_month_year(self, month, year):
-        return lambda x: (x['měsíc'] == month) & (x['rok'] == year)
+    def filter_month(self, start_month, end_month=None):
+        if end_month is None:
+            return lambda x: x['měsíc'] == start_month
+        if end_month < start_month:
+            return lambda x: (x['měsíc'] >= start_month) | (x['měsíc'] <= end_month)
+        return lambda x: (x['měsíc'] >= start_month) & (x['měsíc'] <= end_month)
+    def filter_year(self, start_year, end_year=None):
+        if end_year is None:
+            return lambda x: x['rok'] == start_year
+        return lambda x: (x['rok'] >= start_year) & (x['rok'] <= end_year)
+    def filter_month_year(self, start_month, start_year, end_month=None, end_year=None):
+        return lambda x: (self.filter_month(start_month, end_month)(x)) & (self.filter_year(start_year, end_year)(x))
+
+    def filter_season(self, season:Seasons):
+        if season == Seasons.WINTER:
+            return self.filter_month(12, 2)
+        if season == Seasons.SPRING:
+            return self.filter_month(3, 5)
+        if season == Seasons.SUMMER:
+            return self.filter_month(6, 8)
+        if season == Seasons.AUTUMN:
+            return self.filter_month(9, 11)
+    def filter_day(self, start_day, end_day=None):
+        if end_day is None:
+            return lambda x: x['den'] == start_day
+        if end_day < start_day:
+            return lambda x: (x['den'] >= start_day) | (x['den'] <= end_day)
+        return lambda x: (x['den'] >= start_day) & (x['den'] <= end_day)
+    def filter_date(self, start_day, start_month, end_day=None, end_month=None):
+        return lambda x: (self.filter_month(start_month, end_month)(x)) & (self.filter_day(start_day, end_day)(x))
+    def filter_holiday(self, holiday:Holidays):
+        if holiday == Holidays.NEW_YEAR:
+            return self.filter_date(1, 1)
+        if holiday == Holidays.EASTER:
+            return self.filter_date(1, 4, 30, 4)
+        if holiday == Holidays.CHRISTMAS:
+            return self.filter_date(24, 12, 26, 12)
+        if holiday == Holidays.HALLOWEEN:
+            return self.filter_date(31, 10)
+
+    # returns the hottest day of year for each year
+    def hottest_day_of_year(self):
+        data = self.get_pure_data()
+        if data is None:
+            print("No data to analyze. Please read the data first.")
+            return
+        idx = data.groupby('rok')['TMA'].idxmax()
+        return data.loc[idx]
+
+    # returns the coldest day of year for each year
+    def coldest_day_of_year(self):
+        pure_data = self.get_pure_data()
+        data = self.get_data('rok')
+        if data is None:
+            print("No data to analyze. Please read the data first.")
+            return
+        return pure_data.loc[data.idxmin()['TMI']]
 
 
 if __name__ == "__main__":
@@ -322,9 +388,12 @@ if __name__ == "__main__":
     # print(analyzer.get_highest_rainfall_date())
     # print(analyzer.get_lowest_rainfall_date())
     # print(analyzer.get_highest_temperature_date(1999, 1999))
-    analyzer.plot_day_of_month_avg_rainfall()
-    print(analyzer.get_rainfall_outliers())
-    print(analyzer.get_max_temperature_outliers())
-    print(analyzer.get_min_temperature_outliers())
-    print(analyzer.get_temperature_outliers(filter_func=analyzer.filter_month(1)))
+    # analyzer.plot_day_of_month_avg_rainfall()
+    # print(analyzer.get_rainfall_outliers())
+    # print(analyzer.get_max_temperature_outliers())
+    # print(analyzer.get_min_temperature_outliers())
+    # print(analyzer.get_temperature_outliers(filter_func=analyzer.filter_month(1)))
+    print(analyzer.get_highest_temperature_date(analyzer.filter_holiday(Holidays.CHRISTMAS)))
+    print(analyzer.hottest_day_of_year())
+    print(analyzer.get_temperature_outliers(offset=4))
 
