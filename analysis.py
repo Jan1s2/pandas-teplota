@@ -6,18 +6,10 @@ matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 from enum import Enum
 from functools import partial
+from holidays import Holidays
+from seasons import Seasons
 
-class Seasons(Enum):
-    WINTER = 1
-    SPRING = 2
-    SUMMER = 3
-    AUTUMN = 4
 
-class Holidays(Enum):
-    NEW_YEAR = 1
-    EASTER = 2
-    CHRISTMAS = 3
-    HALLOWEEN = 4
 
 class TemperatureDataAnalyzer:
     """Class to analyze temperature data."""
