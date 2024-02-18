@@ -480,114 +480,6 @@ class TemperatureDataAnalyzer:
 
         # Plot the data
         self.plot(f"Rainfall Mean Development For Month {month}", "Year", "Rainfall (mm)", rainfall_mean)
-
-    def get_highest_rainfall_date(self, filter_func=None):
-        """
-        Get the date with the highest recorded rainfall.
-
-        Args:
-            filter_func (function, optional): A function to filter the data before analysis. Defaults to None.
-
-        Returns:
-            tuple: A tuple containing the year, month, day, and rainfall amount for the date with the highest rainfall.
-        """
-        # Retrieve rainfall data
-        rainfall = self.get_pure_data()
-        if rainfall is None:
-            print("No data to analyze. Please read the data first.")
-            return
-
-        # Apply filter function if provided
-        if filter_func is not None:
-            rainfall = rainfall[filter_func(rainfall)]
-
-        # Find the index of the row with the highest rainfall
-        index = rainfall['SRA'].idxmax()
-
-        # Return date information with highest rainfall
-        return (rainfall['rok'][index], rainfall['měsíc'][index], rainfall['den'][index], rainfall['SRA'][index])
-
-    def get_lowest_rainfall_date(self, filter_func=None):
-        """
-        Get the date with the lowest recorded rainfall.
-
-        Args:
-            filter_func (function, optional): A function to filter the data before analysis. Defaults to None.
-
-        Returns:
-            tuple: A tuple containing the year, month, day, and rainfall amount for the date with the lowest rainfall.
-        """
-        # Retrieve rainfall data
-        rainfall = self.get_pure_data()
-        if rainfall is None:
-            print("No data to analyze. Please read the data first.")
-            return
-
-        # Apply filter function if provided
-        if filter_func is not None:
-            rainfall = rainfall[filter_func(rainfall)]
-
-        # Find the index of the row with the lowest rainfall
-        index = rainfall['SRA'].idxmin()
-
-        # Return date information with lowest rainfall
-        return (rainfall['rok'][index], rainfall['měsíc'][index], rainfall['den'][index], rainfall['SRA'][index])
-
-    def get_highest_temperature_date(self, filter_func=None):
-        """
-        Get the date with the highest temperature.
-
-        Args:
-            filter_func (function, optional): A function used to filter the data. Defaults to None.
-
-        Returns:
-            tuple: A tuple containing the year, month, day, and highest temperature.
-        """
-        # Retrieve the temperature data
-        temperature = self.get_pure_data()
-        
-        # Check if data is available
-        if temperature is None:
-            print("No data to analyze. Please read the data first.")
-            return
-        
-        # Apply the filter function if provided
-        if filter_func:
-            temperature = temperature[filter_func(temperature)]
-        
-        # Find the index of the row with the highest temperature
-        index = temperature['T-AVG'].idxmax()
-        
-        # Return the date and highest temperature
-        return (temperature['rok'][index], temperature['měsíc'][index], temperature['den'][index], temperature['T-AVG'][index])
-
-    def get_lowest_temperature_date(self, filter_func=None):
-        """
-        Get the date with the lowest temperature.
-
-        Args:
-            filter_func (function, optional): A function used to filter the data. Defaults to None.
-
-        Returns:
-            tuple: A tuple containing the year, month, day, and lowest temperature.
-        """
-        # Retrieve the temperature data
-        temperature = self.get_pure_data()
-        
-        # Check if data is available
-        if temperature is None:
-            print("No data to analyze. Please read the data first.")
-            return
-        
-        # Apply the filter function if provided
-        if filter_func:
-            temperature = temperature[filter_func(temperature)]
-        
-        # Find the index of the row with the lowest temperature
-        index = temperature['T-AVG'].idxmin()
-        
-        # Return the date and lowest temperature
-        return (temperature['rok'][index], temperature['měsíc'][index], temperature['den'][index], temperature['T-AVG'][index])
     
     def __get_outliers(self, column, offset=3, filter_func=None):
         """
@@ -865,6 +757,25 @@ class TemperatureDataAnalyzer:
             data = data[filter_func(data)]
         idx = data.groupby('rok')['SRA'].idxmax()
         return data.loc[idx]
+    
+    def least_rainy_day_of_year(self, filter_func=None):
+        """
+        Find the least rainy day of the year.
+
+        Args:
+            filter_func (function, optional): A function to filter data. Defaults to None.
+
+        Returns:
+            pandas.DataFrame: DataFrame containing the least rainy day of each year.
+        """
+        data = self.get_pure_data()
+        if data is None:
+            print("No data to analyze. Please read the data first.")
+            return
+        if filter_func is not None:
+            data = data[filter_func(data)]
+        idx = data.groupby('rok')['SRA'].idxmin()
+        return data.loc[idx]
 
     def get_year_max_temperature(self, year):
         """
@@ -890,6 +801,88 @@ class TemperatureDataAnalyzer:
         """
         return self.coldest_day_of_year(self.filter_year(year))
 
+    def get_year_max_rainfall(self, year):
+        """
+        Get the maximum rainfall for a specific year.
+
+        Args:
+            year (int): The year to retrieve maximum rainfall data for.
+
+        Returns:
+            pandas.DataFrame: DataFrame containing the maximum rainfall data for the specified year.
+        """
+        return self.rainiest_day_of_year(self.filter_year(year))
+
+    def get_highest_rainfall_date(self, filter_func=None):
+        """
+        Get the date with the highest recorded rainfall.
+
+        Args:
+            filter_func (function, optional): A function to filter the data before analysis. Defaults to None.
+
+        Returns:
+            tuple: A tuple containing the year, month, day, and rainfall amount for the date with the highest rainfall.
+        """
+        # Retrieve rainfall data
+        data = self.rainiest_day_of_year(filter_func)
+        if data is None:
+            print("No data to analyze. Please read the data first.")
+            return
+        idx = data['SRA'].idxmax()
+        return (data['rok'][idx], data['měsíc'][idx], data['den'][idx], data['SRA'][idx])
+
+    def get_lowest_rainfall_date(self, filter_func=None):
+        """
+        Get the date with the lowest recorded rainfall.
+
+        Args:
+            filter_func (function, optional): A function to filter the data before analysis. Defaults to None.
+
+        Returns:
+            tuple: A tuple containing the year, month, day, and rainfall amount for the date with the lowest rainfall.
+        """
+        # Retrieve rainfall data
+        data = self.least_rainy_day_of_year(filter_func)
+        if data is None:
+            print("No data to analyze. Please read the data first.")
+            return
+        idx = data['SRA'].idxmin()
+        return (data['rok'][idx], data['měsíc'][idx], data['den'][idx], data['SRA'][idx])
+        
+
+    def get_highest_temperature_date(self, filter_func=None):
+        """
+        Get the date with the highest temperature.
+
+        Args:
+            filter_func (function, optional): A function used to filter the data. Defaults to None.
+
+        Returns:
+            tuple: A tuple containing the year, month, day, and highest temperature.
+        """
+        data = self.hottest_day_of_year(filter_func)
+        if data is None:
+            print("No data to analyze. Please read the data first.")
+            return
+        idx = data['TMA'].idxmax()
+        return (data['rok'][idx], data['měsíc'][idx], data['den'][idx], data['TMA'][idx])
+
+    def get_lowest_temperature_date(self, filter_func=None):
+        """
+        Get the date with the lowest temperature.
+
+        Args:
+            filter_func (function, optional): A function used to filter the data. Defaults to None.
+
+        Returns:
+            tuple: A tuple containing the year, month, day, and lowest temperature.
+        """
+        data = self.coldest_day_of_year(filter_func)
+        if data is None:
+            print("No data to analyze. Please read the data first.")
+            return
+        idx = data['TMI'].idxmin()
+        return (data['rok'][idx], data['měsíc'][idx], data['den'][idx], data['TMI'][idx])
 
 if __name__ == "__main__":
     file_path = "klementinum.xlsx"  # Update with your file path
@@ -917,7 +910,7 @@ if __name__ == "__main__":
     # print(analyzer.get_max_temperature_outliers())
     # print(analyzer.get_min_temperature_outliers())
     # print(analyzer.get_temperature_outliers(filter_func=analyzer.filter_month(1)))
-    analyzer.get_lowest_rainfall_date()
+    print(analyzer.get_lowest_temperature_date())
     print(analyzer.get_highest_temperature_date(analyzer.filter_holiday(Holidays.CHRISTMAS)))
     print(analyzer.hottest_day_of_year(analyzer.filter_year(1999)))
     print(analyzer.get_temperature_outliers(offset=4))
