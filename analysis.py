@@ -848,7 +848,6 @@ class TemperatureDataAnalyzer:
             return
         idx = data['SRA'].idxmin()
         return (data['rok'][idx], data['měsíc'][idx], data['den'][idx], data['SRA'][idx])
-        
 
     def get_highest_temperature_date(self, filter_func=None):
         """
