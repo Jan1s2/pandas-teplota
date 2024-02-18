@@ -23,6 +23,7 @@ class TemperatureDataAnalyzer:
         """
         self.file_path = file_path
         self.data: pd.DataFrame = None
+        self.read_data()
 
     def __str__(self):
         return f"{self.summary_statistics()}"
@@ -878,7 +879,6 @@ class TemperatureDataAnalyzer:
 if __name__ == "__main__":
     file_path = "klementinum.xlsx"  # Update with your file path
     analyzer = TemperatureDataAnalyzer(file_path)
-    analyzer.read_data()
     print(analyzer)
     # analyzer.summary_statistics()
     # print(analyzer.get_data('rok', 'T-AVG').mean())
