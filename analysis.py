@@ -35,13 +35,15 @@ class TemperatureDataAnalyzer:
         except FileNotFoundError:
             print("File not found. Please provide a valid file path.")
 
-    def summary_statistics(self):
+    def summary_statistics(self, filter_func=None):
         """Display summary statistics of the data."""
         if self.data is None:
             print("No data to analyze. Please read the data first.")
             return
-
-        summary = self.data.describe()
+        data = self.data
+        if filter_func is not None:
+            data = data[filter_func(data)]
+        summary = data.describe()
         return summary
 
     def get_pure_data(self):
@@ -181,10 +183,10 @@ class TemperatureDataAnalyzer:
         # Partial function to retrieve temperature data
         temperature = partial(
             self.get_data,
-            base='T-AVG',
+            time='měsíc',
             filter_func=filter_func)
         # Retrieve monthly average temperature data
-        monthly_avg_temp_data = temperature('měsíc')
+        monthly_avg_temp_data = temperature(base='T-AVG')
         if monthly_avg_temp_data is None:
             print("No data to analyze. Please read the data first.")
             return
@@ -193,10 +195,10 @@ class TemperatureDataAnalyzer:
         monthly_avg_temp = monthly_avg_temp_data.mean()
         monthly_avg_temp.name = "Average Temperature"
         # Calculate and name monthly maximum temperature
-        monthly_max_temp = temperature('TMA').max()
+        monthly_max_temp = temperature(base='TMA').max()
         monthly_max_temp.name = "Max Temperature"
         # Calculate and name monthly minimum temperature
-        monthly_min_temp = temperature('TMI').min()
+        monthly_min_temp = temperature(base='TMI').min()
         monthly_min_temp.name = "Min Temperature"
         # Plot the data
         self.plot(
@@ -342,7 +344,7 @@ class TemperatureDataAnalyzer:
             monthly_max_rainfall,
             monthly_min_rainfall)
 
-    def plot_day_avg_temperature(self, filter_func=None):
+    def plot_day_of_month_avg_temperature(self, filter_func=None):
         """
         Plot the daily average temperature.
 
@@ -351,7 +353,7 @@ class TemperatureDataAnalyzer:
         """
         # Retrieve daily average temperature data
         daily_avg_temp_data = self.get_data(
-            'den', 'T-AVG', filter_func=filter_func)
+            ['měsíc', 'den'], 'T-AVG', filter_func=filter_func)
         if daily_avg_temp_data is None:
             print("No data to analyze. Please read the data first.")
             return
@@ -378,7 +380,7 @@ class TemperatureDataAnalyzer:
         """
         # Get daily maximum temperature data
         daily_max_temp_data = self.get_data(
-            'den', 'TMA', filter_func=filter_func)
+            ['měsíc', 'den'], 'TMA', filter_func=filter_func)
         if daily_max_temp_data is None:
             print("No data to analyze. Please read the data first.")
             return
@@ -405,7 +407,7 @@ class TemperatureDataAnalyzer:
         """
         # Get daily minimum temperature data
         daily_min_temp_data = self.get_data(
-            'den', 'TMI', filter_func=filter_func)
+            ['měsíc', 'den'], 'TMI', filter_func=filter_func)
         if daily_min_temp_data is None:
             print("No data to analyze. Please read the data first.")
             return
@@ -432,7 +434,7 @@ class TemperatureDataAnalyzer:
         """
         # Get daily average rainfall data
         daily_avg_rainfall_data = self.get_data(
-            'den', 'SRA', filter_func=filter_func)
+            ['měsíc', 'den'], 'SRA', filter_func=filter_func)
         if daily_avg_rainfall_data is None:
             print("No data to analyze. Please read the data first.")
             return
@@ -459,7 +461,7 @@ class TemperatureDataAnalyzer:
         """
         # Get daily maximum rainfall data
         daily_max_rainfall_data = self.get_data(
-            'den', 'SRA', filter_func=filter_func)
+            ['měsíc', 'den'], 'SRA', filter_func=filter_func)
         if daily_max_rainfall_data is None:
             print("No data to analyze. Please read the data first.")
             return
@@ -486,7 +488,7 @@ class TemperatureDataAnalyzer:
         """
         # Get daily minimum rainfall data
         daily_min_rainfall_data = self.get_data(
-            'den', 'SRA', filter_func=filter_func)
+            ['měsíc', 'den'], 'SRA', filter_func=filter_func)
         if daily_min_rainfall_data is None:
             print("No data to analyze. Please read the data first.")
             return
@@ -1054,5 +1056,4 @@ if __name__ == "__main__":
         analyzer.filter_holiday(Holidays.CHRISTMAS)))
     print(analyzer.hottest_day_of_year(analyzer.filter_year(1999)))
     print(analyzer.get_temperature_outliers(offset=4))
-    analyzer.plot_monthly_avg_temperature(
-        filter_func=analyzer.filter_holiday(Holidays(1)))
+    analyzer.plot_day_of_month_max_temperature()
