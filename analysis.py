@@ -32,6 +32,9 @@ class TemperatureDataAnalyzer:
         self.file_path = file_path
         self.data: pd.DataFrame = None
 
+    def __str__(self):
+        return f"{self.summary_statistics()}"
+
     def read_data(self):
         """Read data from the provided file path."""
         try:
@@ -47,7 +50,7 @@ class TemperatureDataAnalyzer:
             return
 
         summary = self.data.describe()
-        print(summary)
+        return summary
 
     def get_pure_data(self):
         """Get the raw data."""
@@ -892,6 +895,7 @@ if __name__ == "__main__":
     file_path = "klementinum.xlsx"  # Update with your file path
     analyzer = TemperatureDataAnalyzer(file_path)
     analyzer.read_data()
+    print(analyzer)
     # analyzer.summary_statistics()
     # print(analyzer.get_data('rok', 'T-AVG').mean())
     # print(analyzer.get_data('rok', 'TMA').max())
@@ -913,6 +917,7 @@ if __name__ == "__main__":
     # print(analyzer.get_max_temperature_outliers())
     # print(analyzer.get_min_temperature_outliers())
     # print(analyzer.get_temperature_outliers(filter_func=analyzer.filter_month(1)))
+    analyzer.get_lowest_rainfall_date()
     print(analyzer.get_highest_temperature_date(analyzer.filter_holiday(Holidays.CHRISTMAS)))
     print(analyzer.hottest_day_of_year(analyzer.filter_year(1999)))
     print(analyzer.get_temperature_outliers(offset=4))
