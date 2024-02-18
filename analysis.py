@@ -1025,35 +1025,3 @@ class TemperatureDataAnalyzer:
             data['den'][idx],
             data['TMI'][idx])
 
-
-if __name__ == "__main__":
-    file_path = "klementinum.xlsx"  # Update with your file path
-    analyzer = TemperatureDataAnalyzer(file_path)
-    print(analyzer)
-    # analyzer.summary_statistics()
-    # print(analyzer.get_data('rok', 'T-AVG').mean())
-    # print(analyzer.get_data('rok', 'TMA').max())
-    # print(analyzer.get_data('rok', 'TMI').min())
-    # print(analyzer.get_data('rok', 'SRA').mean())
-    # analyzer.plot_monthly_avg_temperature()
-    # analyzer.plot_monthly_all_rainfall()
-    # analyzer.plot_yearly_all_temperature(1900, 2020)
-    # analyzer.plot_rainfall_mean_development_decades()
-    # analyzer.plot_rainfall_mean_development_years(10)
-    # analyzer.plot_rainfall_mean_development_years(1, 1900, 2020)
-    # analyzer.plot_rainfall_mean_development_month(1)
-    # analyzer.plot_day_of_month_max_rainfall()
-    # print(analyzer.get_highest_rainfall_date())
-    # print(analyzer.get_lowest_rainfall_date())
-    # print(analyzer.get_highest_temperature_date(1999, 1999))
-    # analyzer.plot_day_of_month_avg_rainfall()
-    # print(analyzer.get_rainfall_outliers())
-    # print(analyzer.get_max_temperature_outliers())
-    # print(analyzer.get_min_temperature_outliers())
-    # print(analyzer.get_temperature_outliers(filter_func=analyzer.filter_month(1)))
-    print(analyzer.get_lowest_temperature_date())
-    print(analyzer.get_highest_temperature_date(
-        analyzer.filter_holiday(Holidays.CHRISTMAS)))
-    print(analyzer.hottest_day_of_year(analyzer.filter_year(1999)))
-    print(analyzer.get_temperature_outliers(offset=4))
-    analyzer.plot_day_of_month_max_temperature()
